@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #151515;
+  --color-ink: #f2f2f2;
+  --color-mute: #a3a3a3;
+  --color-accent: #e5483d;
+  --font-display: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+html { scroll-behavior: smooth; color-scheme: dark; }
+body {
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  background:
+    radial-gradient(60rem 38rem at -10% -8%, rgba(229, 72, 61, 0.55), transparent 62%),
+    radial-gradient(52rem 40rem at 110% 108%, rgba(229, 72, 61, 0.45), transparent 62%),
+    var(--color-bg);
+  background-attachment: fixed;
+}
+.tiles {
+  background-image: linear-gradient(rgba(255,255,255,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.14) 1px, transparent 1px);
+  background-size: 52px 52px;
+  -webkit-mask-image: radial-gradient(closest-side at 55% 45%, #000 25%, transparent);
+  mask-image: radial-gradient(closest-side at 55% 45%, #000 25%, transparent);
+}
+a:focus-visible, button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+
+.card {
+  position: relative; overflow: hidden; border-radius: 1rem;
+  border: 1px solid rgba(255,255,255,.1);
+  background: linear-gradient(150deg, rgba(229,72,61,.22), rgba(255,255,255,.03) 50%, rgba(0,0,0,.25));
+  transition: border-color .3s, transform .3s;
+}
+.card > * { position: relative; }
+.card::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 0%), rgba(229,72,61,.3), transparent 60%);
+}
+.card:hover { border-color: rgba(229,72,61,.6); transform: translateY(-3px); }
+.card:hover::before { opacity: 1; }
+@keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@keyframes marquee { to { transform: translateX(-50%); } }
+@keyframes drift { 50% { transform: translateY(-10px); } }
+.rise { animation: rise .8s cubic-bezier(.2,.7,.2,1) both; }
+.marquee { animation: marquee 28s linear infinite; }
+.drift { animation: drift 6s ease-in-out infinite; will-change: transform; backface-visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .rise, .marquee, .drift { animation: none; } .card:hover { transform: none; } }
+
+html, body { overflow-x: clip; }
+@media (max-width: 768px) { body { background-attachment: scroll; } }
+
+.photo-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent), linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, #000 82%, transparent), linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  mask-composite: intersect;
+}
