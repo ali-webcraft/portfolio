@@ -91,7 +91,7 @@ function Project({ p, i, open }) {
   const gallery = p.phone && shots.length > 0
   return (
     <Reveal delay={(i % 2) * 120} className={gallery ? 'md:col-span-2' : ''}>
-      <Card className="group flex h-full cursor-pointer flex-col" role="button" tabIndex={0} onClick={() => open(p)} onKeyDown={(e) => e.key === 'Enter' && open(p)}>
+      <Card className="group flex h-full cursor-pointer flex-col" role="button" tabIndex={0} onClick={() => open(p)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); open(p) } }}>
         {!gallery && <Media p={p} shots={shots} />}
         <div className="p-6">
           <div className="flex items-start justify-between gap-4">
@@ -118,20 +118,36 @@ function Project({ p, i, open }) {
 function Modal({ p, onClose }) {
   const shots = useShots(p.shots)
   const gallery = p.phone && shots.length > 0
+  const dlg = useRef(null)
   useEffect(() => {
-    const key = (e) => e.key === 'Escape' && onClose()
+    const prev = document.activeElement // card that opened the modal
+    dlg.current?.querySelector('button')?.focus()
+    const key = (e) => {
+      if (e.key === 'Escape') return onClose()
+      if (e.key !== 'Tab' || !dlg.current) return
+      // focus trap: Tab / Shift+Tab loop inside the modal
+      const f = [...dlg.current.querySelectorAll('a[href], button:not([disabled])')]
+      if (!f.length) return
+      const first = f[0], last = f[f.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
     document.addEventListener('keydown', key)
     document.body.style.overflow = 'hidden'
-    return () => { document.removeEventListener('keydown', key); document.body.style.overflow = '' }
+    return () => {
+      document.removeEventListener('keydown', key)
+      document.body.style.overflow = ''
+      prev?.focus?.() // give focus back to the card
+    }
   }, [])
   const H = ({ children }) => <h4 className="mb-3 mt-8 text-lg font-semibold">{children}</h4>
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-6" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label={p.title} onClick={(e) => e.stopPropagation()} className="rise relative w-full max-w-3xl overflow-hidden rounded-t-3xl border border-white/10 bg-[#1a1212] sm:rounded-3xl">
+      <div ref={dlg} role="dialog" aria-modal="true" aria-label={p.title} onClick={(e) => e.stopPropagation()} className="rise relative w-full max-w-3xl overflow-hidden rounded-t-3xl border border-white/10 bg-[#1a1212] sm:rounded-3xl">
         <button onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-20 grid h-10 w-10 place-items-center rounded-full border border-white/20 bg-black/60 backdrop-blur transition-colors hover:bg-white hover:text-black">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
-        <div className="max-h-[92vh] overflow-y-auto">
+        <div className="modal-scroll max-h-[92vh] overflow-y-auto">
         {gallery ? <div className="pt-14"><Gallery project={p} shots={shots} /></div> : <Media p={p} shots={shots} />}
         <div className="p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-3">
@@ -179,18 +195,77 @@ function Row({ label, children }) {
   )
 }
 
+// Navbar stays hidden at the top, slides in while scrolling, hides again after a short pause.
+function useAutoNav(idleMs = 1800) {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    let t
+    const onScroll = () => {
+      clearTimeout(t)
+      if (window.scrollY < 80) return setShow(false)
+      setShow(true)
+      t = setTimeout(() => setShow(false), idleMs)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(t) }
+  }, [idleMs])
+  return [show, setShow]
+}
+
+// Highlights the nav link of the section currently in the middle of the screen.
+function useActiveSection(ids) {
+  const [active, setActive] = useState('')
+  useEffect(() => {
+    const els = ids.map((id) => document.getElementById(id)).filter(Boolean)
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) setActive(e.target.id)
+        else if (e.target.id === ids[0] && e.boundingClientRect.top > 0) setActive('') // scrolled back up to hero
+      })
+    }, { rootMargin: '-40% 0px -55% 0px' })
+    els.forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [])
+  return active
+}
+
+// Thin accent line at the very top that fills as you scroll down the page.
+function ScrollProgress() {
+  const bar = useRef(null)
+  useEffect(() => {
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      bar.current.style.transform = `scaleX(${max > 0 ? Math.min(1, window.scrollY / max) : 0})`
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => { window.removeEventListener('scroll', update); window.removeEventListener('resize', update) }
+  }, [])
+  return <div ref={bar} aria-hidden="true" className="fixed inset-x-0 top-0 z-30 h-[3px] origin-left bg-accent" style={{ transform: 'scaleX(0)' }} />
+}
+
 export default function App() {
   const [sel, setSel] = useState(null)
+  const [navShow, setNavShow] = useAutoNav()
+  const active = useActiveSection(['about', 'skills', 'projects', 'contact'])
   return (
     <>
-      <header className="sticky top-0 z-20 px-4 pt-4">
+      <ScrollProgress />
+      <header
+        onMouseEnter={() => setNavShow(true)}
+        onFocus={() => setNavShow(true)}
+        className={`fixed inset-x-0 top-0 z-20 px-4 pt-4 transition-transform duration-300 ease-out ${navShow ? 'translate-y-0' : '-translate-y-[130%]'}`}
+      >
         <nav className="mx-auto flex max-w-6xl items-center justify-between rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm backdrop-blur-md">
           <a href="#top" className="flex items-center gap-2.5 font-semibold">
             <span className="grid h-8 w-8 place-items-center rounded-lg border border-accent/60 bg-accent/15 font-mono text-xs font-bold text-accent shadow-[0_0_18px_rgba(229,72,61,.45)]">&lt;/&gt;</span>
             {profile.handle}
           </a>
           <div className="hidden gap-6 text-neutral-300 sm:flex">
-            {['about', 'skills', 'projects'].map((s) => <a key={s} href={`#${s}`} className="capitalize hover:text-white">{s}</a>)}
+            {['about', 'skills', 'projects'].map((s) => (
+              <a key={s} href={`#${s}`} aria-current={active === s ? 'true' : undefined} className={`capitalize border-b-2 pb-0.5 transition-colors hover:text-white ${active === s ? 'border-accent text-white' : 'border-transparent'}`}>{s}</a>
+            ))}
           </div>
           <a href="#contact" className="rounded-md bg-white px-4 py-1.5 font-semibold text-black hover:bg-neutral-200">Let's talk</a>
         </nav>
