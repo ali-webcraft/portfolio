@@ -74,13 +74,33 @@ function Badge({ status }) {
 }
 
 function Gallery({ project, shots }) {
+  const row = useRef(null)
+  const [over, setOver] = useState(false) // arrows only when the screens don't all fit
+  useEffect(() => {
+    const el = row.current
+    const check = () => setOver(el.scrollWidth > el.clientWidth + 1)
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [shots.length])
+  const go =(dir) => (e) => { e.stopPropagation(); row.current?.scrollBy({ left: dir * 340, behavior: 'smooth' }) }
+  const arrow = 'absolute top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-black/60 backdrop-blur transition-colors hover:bg-white hover:text-black sm:grid'
   return (
-    <div className="flex gap-4 overflow-x-auto p-6 pt-0">
-      {shots.map((src, i) => (
-        <div key={src} className="aspect-[9/19] w-36 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black/40 transition-transform duration-300 hover:-translate-y-2 sm:w-40">
-          <img src={src} alt={`${project.title} screen ${i + 1}`} loading="lazy" className="h-full w-full object-cover" />
-        </div>
-      ))}
+    <div className="relative">
+      <div ref={row} className="no-bar flex gap-4 overflow-x-auto p-6 pt-0">
+        {shots.map((src, i) => (
+          <div key={src} className="aspect-[9/19] w-36 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black/40 transition-transform duration-300 hover:-translate-y-2 sm:w-40">
+            <img src={src} alt={`${project.title} screen ${i + 1}`} loading="lazy" className="h-full w-full object-cover" />
+          </div>
+        ))}
+      </div>
+      {over && (
+        <>
+          <button type="button" aria-label="Scroll screens left" onClick={go(-1)} className={`${arrow} left-2`}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 6-6 6 6 6" /></svg></button>
+          <button type="button" aria-label="Scroll screens right" onClick={go(1)} className={`${arrow} right-2`}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg></button>
+        </>
+      )}
     </div>
   )
 }

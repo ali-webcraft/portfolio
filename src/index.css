@@ -51,6 +51,10 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--color-accent); 
 
 html, body { overflow-x: clip; }
 
+/* Horizontal screenshot gallery: no scrollbar (arrows + swipe/trackpad still scroll) */
+.no-bar { scrollbar-width: none; }
+.no-bar::-webkit-scrollbar { display: none; }
+
 /* Page scrollbar hidden (scrolling still works); modal gets a thin, subtle one */
 html { scrollbar-width: none; }
 html::-webkit-scrollbar { display: none; }
