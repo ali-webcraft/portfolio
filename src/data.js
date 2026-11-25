@@ -90,7 +90,7 @@ export const projects = [
     tech: ['Next.js', 'Node.js', 'Express', 'MongoDB', 'Tailwind CSS'],
     live: 'https://webcraft-inventory-app.vercel.app/',
     github: 'https://github.com/ali-webcraft/webcraft-inventory',
-    shots: ['/screens/webcraft-products.jpg', '/screens/webcraft-add-product.jpg', '/screens/webcraft-login.jpg', '/screens/webcraft-mobile.jpg'],
+    shots: ['/screens/webcraft-products.jpg'],
   },
   {
     title: 'UserBase App',
